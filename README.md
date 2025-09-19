@@ -2,6 +2,7 @@
 
 [![Project Status: In Development](https://img.shields.io/badge/status-in_development-orange.svg)](https://github.com/pranavaupparlapalli/CORE-seq)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Language: Python](https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue)]
 
 Hi! I am Pranava Upparlapalli and this is my brain child at 1:00 AM. The reason as to why I wanted to build this project was mainly because I was pondering the question "is there a faster processing format than `*.fasta`?"
 
@@ -50,6 +51,7 @@ Okay, so what does this actually mean for a real scientist or data analyst? Here
 This project is currently in the planning and early development stage. Here's the plan:
 
 -   [x] Define the core concept and file specification.
+-   [x] Initial Skeleton
 -   [ ] **In Progress:** Develop the core Python library for encoding/decoding sequences.
 -   [ ] Build the tool for converting FASTA files to `.cseq`.
 -   [ ] Implement the high-performance ML data loader.

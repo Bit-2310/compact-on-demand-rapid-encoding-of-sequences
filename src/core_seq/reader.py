@@ -1,64 +1,159 @@
 """
 coreRead: The CSEQ File Reader Module
 
-This module provides the main CSEQReader class for opening and reading
-data from .cseq files with high performance.
+This is the librarian of the CORE-seq project. It provides a fast
+and easy way to read data from a .cseq file.
 """
-
+import json
+import struct
 from ._codec import decode_sequence, verify_checksum
 
 class CSEQReader:
     """
-    Provides fast, random-access to sequences within a .cseq file.
+    Reads a .cseq file and provides fast, on-demand access to sequences.
+
+    It's designed to be used as a context manager (in a `with` block)
+    to ensure the file is always properly handled. It loads the entire
+    index into memory for instant lookups.
+
+    Example:
+        with CSEQReader("my_data.cseq") as reader:
+            # Get a sequence by its ID
+            sequence = reader.get("chrM")
+            
+            # Or use it like a dictionary
+            sequence = reader["chrM"]
+            
+            # Get metadata
+            metadata = reader.get_metadata()
     """
     def __init__(self, filepath: str):
-        self.filepath = filepath
+        """Prepares the reader with the path to a .cseq file."""
+        if not isinstance(filepath, str):
+            raise TypeError("Filepath must be a string.")
+        
+        self._filepath = filepath
         self._file = None
-        self.index = {}
-        self.metadata = {}
+        self._index = {}
+        self._metadata = {}
 
     def open(self):
-        """Opens the .cseq file, validates it, and loads the index."""
-        # TODO: Open file, read and validate header, seek to index, and load it.
-        return self
-
-    def get(self, sequence_id: str, validate_checksum: bool = False) -> str:
         """
-        Fetches and decodes a single sequence by its ID.
+        Opens the file, verifies the header, and loads the index into memory.
+        This is called automatically when you use a `with` block.
+        """
+        try:
+            self._file = open(self._filepath, 'rb')
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Error: No such file '{self._filepath}'")
+
+        # --- Read and Verify the Header ---
+        header_bytes = self._file.read(16)
+        if len(header_bytes) < 16:
+            raise IOError("File is too small to be a valid .cseq file.")
+
+        magic, flags, index_offset = struct.unpack('>6sHQ', header_bytes)
+
+        if not magic.startswith(b'CSEQ'):
+            raise IOError(f"Not a valid .cseq file. Incorrect magic number: {magic}")
         
+        # --- Seek to and Read the Index ---
+        self._file.seek(index_offset)
+        index_bytes = self._file.read()
+        index_obj = json.loads(index_bytes.decode('utf-8'))
+        
+        self._index = index_obj.get("index", {})
+        
+        # --- (Optional) Load Metadata ---
+        metadata_offset = index_obj.get("metadata_offset")
+        if metadata_offset:
+            self._file.seek(metadata_offset)
+            # We need to read from metadata start to index start
+            metadata_bytes = self._file.read(index_offset - metadata_offset)
+            self._metadata = json.loads(metadata_bytes.decode('utf-8'))
+
+    def get(self, sequence_id: str, validate_checksum: bool = True) -> str:
+        """
+        Fetches a single sequence by its ID. This is the primary method.
+
         Args:
             sequence_id (str): The ID of the sequence to retrieve.
-            validate_checksum (bool): If True, verifies the data integrity.
-        
+            validate_checksum (bool): If True, verifies the data's integrity.
+                                      Set to False for maximum speed.
+
         Returns:
-            str: The decoded DNA sequence, or None if not found.
+            The decoded DNA sequence string.
+            
+        Raises:
+            KeyError: If the sequence_id is not found in the file.
+            IOError: If the file is not open or data is corrupt.
         """
-        # TODO: Look up in index, seek, read, optionally verify, and decode.
-        return "GATTACA..." # Placeholder
+        if self._file is None:
+            raise IOError("File is not open. Use 'with CSEQReader(...) as reader:'.")
+        
+        if sequence_id not in self._index:
+            raise KeyError(f"Sequence ID '{sequence_id}' not found in the file.")
+
+        offset, compressed_length, original_length = self._index[sequence_id]
+        
+        # Jump directly to the sequence's data block
+        self._file.seek(offset)
+        
+        # The last 4 bytes are the checksum
+        data_length = compressed_length - 4
+        
+        encoded_data = self._file.read(data_length)
+        checksum_bytes = self._file.read(4)
+        
+        if validate_checksum:
+            expected_checksum, = struct.unpack('>I', checksum_bytes)
+            if not verify_checksum(encoded_data, expected_checksum):
+                raise IOError(f"Data corruption detected for sequence '{sequence_id}'. Checksum mismatch.")
+
+        return decode_sequence(encoded_data, original_length)
 
     def get_metadata(self) -> dict:
-        """Returns the user-defined metadata from the file."""
-        return self.metadata
+        """Returns the metadata dictionary stored in the file."""
+        return self._metadata
 
     def list_ids(self) -> list:
         """Returns a list of all sequence IDs in the file."""
-        return list(self.index.keys())
-    
-    def __getitem__(self, key):
+        return list(self._index.keys())
+
+    def get_length(self, sequence_id: str) -> int:
+        """
+        Returns the original length of a sequence without reading the data.
+        This is very fast as it just reads from the index.
+        """
+        if sequence_id not in self._index:
+            raise KeyError(f"Sequence ID '{sequence_id}' not found in the file.")
+        return self._index[sequence_id][2] # The 3rd item is original_length
+
+    def close(self):
+        """Closes the file handle."""
+        if self._file:
+            self._file.close()
+            self._file = None
+
+    # --- Pythonic "Magic Methods" for a better user experience ---
+    def __enter__(self):
+        """Called when entering a `with` block."""
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Called when exiting a `with` block."""
+        self.close()
+
+    def __getitem__(self, key: str) -> str:
         """Allows dictionary-style access, e.g., reader['chrM']"""
         return self.get(key)
 
-    def __len__(self):
-        """Allows getting the number of sequences with len(reader)"""
-        return len(self.index)
-        
-    def close(self):
-        """Closes the file."""
-        if self._file:
-            self._file.close()
+    def __len__(self) -> int:
+        """Allows `len(reader)` to return the number of sequences."""
+        return len(self._index)
 
-    def __enter__(self):
-        return self.open()
+    def __contains__(self, key: str) -> bool:
+        """Allows `'chrM' in reader` to check for a sequence's existence."""
+        return key in self._index
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
