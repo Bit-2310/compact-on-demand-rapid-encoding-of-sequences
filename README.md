@@ -1,15 +1,37 @@
 # CORE-seq : Compact On-demand Rapid Encoding of Sequences
 
-[![Project Status: In Development](https://img.shields.io/badge/status-in_development-orange.svg)](https://github.com/pranavaupparlapalli/CORE-seq)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Language: Python](https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue)]\
+[![Project Status](https://img.shields.io/badge/status-in_development-orange?style=for-the-badge)](https://github.com/pranavaupparlapalli/CORE-seq)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](./LICENSE.md)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen?style=for-the-badge&logo=pytest)](./tests)
+[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-blueviolet?style=for-the-badge&logo=github)](https://github.com/pranavaupparlapalli/CORE-seq/issues)
 
 
 Hi! I am Pranava Upparlapalli and this is my brain child at 1:00 AM. The reason as to why I wanted to build this project was mainly because I was pondering the question "is there a faster processing format than `*.fasta`?"
 
-Of course, there are several, for example, the BAM format for alignments, CRAM for reference-based compression, and even UCSC's `.2bit` format. But I wanted to work on this problem too, just because... why not? It's an interesting problem, at least in my mind.
+Of course, there are several, for example, the BAM format for alignments, CRAM for reference-based compression, UCSC's `.2bit` format and several others. But I wanted to work on this problem too, just because... why not? It's an interesting problem, at least in my mind.
 
 ---
+## 📂 Directory Structure
+
+```plaintext
+CORE-seq/
+├── src/
+│   └── core_seq/
+│       ├── __init__.py
+│       ├── _codec.py
+│       ├── loader.py
+│       ├── reader.py
+│       └── writer.py
+│
+├── tests/
+│   └── 01_Initial_tests.py
+│
+├── .gitignore
+├── LICENSE.md
+├── README.md
+└── pyproject.toml
+```
 
 ## The CORE Concept
 
@@ -17,7 +39,7 @@ The big idea was to stop treating sequence files like dumb text documents and st
 
 Here's the breakdown of what I cooked up:
 
-1.  **Stop Wasting Space (Compact):** A standard FASTA file uses a whole 8 bits to store a single base like 'A' or 'G'. That's a huge waste! CORE-seq uses a smarter 2-bit encoding, which means we can pack four bases into the space of one. This shrinks the sequence data by about 75%.
+1.  **Stop Wasting Space (Compact):** A standard FASTA file uses a whole 8 bits to store a single base like 'A' or 'G'. That's a huge waste! CORE-seq uses a smarter 4-bit encoding, which means we can pack four bases into the space of one. This shrinks the sequence data by about 50% (assumption! since I still need to test this)
 
 2.  **Instant Access (On-demand):** This is the secret sauce. Instead of having to read through 9 GB of a 10 GB file just to get to the end, CORE-seq creates an index—like a table of contents for your sequences. So when you ask for "chromosome Y," the program looks it up in the index, sees it starts at byte `5,432,100`, and jumps right there. It's the difference between scrolling through a giant PDF and clicking a bookmark.
 
@@ -29,11 +51,9 @@ Here's the breakdown of what I cooked up:
 
 At its heart, a `.cseq` file is a smartly structured binary file. It's not just a stream of data; it's organized into three distinct parts to make it fast and flexible.
 
-
-
 1.  **File Header:** A small section at the very top of the file that acts like a business card. It tells the program: "Hi, I'm a .cseq file, version 1.0, the data inside is DNA, and you can find the index way at the end at this specific byte location."
 
-2.  **Data Blocks:** This is the main body of the file where all the sequence data lives. Each sequence is compressed and stored in its own independent block. This is key—it means we can grab just one sequence without having to touch or read any of the others.
+2.  2. **Data Blocks:** This is the main body of the file where all the sequence data lives. Each sequence is encoded (using 4-bit packing) and stored in its own independent block. This is key—it means we can grab just one sequence without having to touch or read any of the others.
 
 3.  **Index Block:** This is the "table of contents" that makes everything so fast. It's a list, stored at the end of the file, that maps every sequence ID to its exact location (byte offset) in the file. When you want a sequence, the program reads this small index into memory and immediately knows where to find everything.
 
