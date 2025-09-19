@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="CORE-seq logo" width="600"/>
+</p>
+
 # CORE-seq : Compact On-demand Rapid Encoding of Sequences
 
 [![Project Status](https://img.shields.io/badge/status-in_development-orange?style=for-the-badge)](https://github.com/pranavaupparlapalli/CORE-seq)
