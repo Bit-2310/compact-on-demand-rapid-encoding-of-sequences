@@ -53,7 +53,7 @@ At its heart, a `.cseq` file is a smartly structured binary file. It's not just 
 
 1.  **File Header:** A small section at the very top of the file that acts like a business card. It tells the program: "Hi, I'm a .cseq file, version 1.0, the data inside is DNA, and you can find the index way at the end at this specific byte location."
 
-2.  2. **Data Blocks:** This is the main body of the file where all the sequence data lives. Each sequence is encoded (using 4-bit packing) and stored in its own independent block. This is key—it means we can grab just one sequence without having to touch or read any of the others.
+2.  **Data Blocks:** This is the main body of the file where all the sequence data lives. Each sequence is encoded (using 4-bit packing) and stored in its own independent block. This is key—it means we can grab just one sequence without having to touch or read any of the others.
 
 3.  **Index Block:** This is the "table of contents" that makes everything so fast. It's a list, stored at the end of the file, that maps every sequence ID to its exact location (byte offset) in the file. When you want a sequence, the program reads this small index into memory and immediately knows where to find everything.
 
