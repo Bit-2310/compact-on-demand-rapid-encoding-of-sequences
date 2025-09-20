@@ -15,17 +15,6 @@ class CSEQReader:
     It's designed to be used as a context manager (in a `with` block)
     to ensure the file is always properly handled. It loads the entire
     index into memory for instant lookups.
-
-    Example:
-        with CSEQReader("my_data.cseq") as reader:
-            # Get a sequence by its ID
-            sequence = reader.get("chrM")
-            
-            # Or use it like a dictionary
-            sequence = reader["chrM"]
-            
-            # Get metadata
-            metadata = reader.get_metadata()
     """
     def __init__(self, filepath: str):
         """Prepares the reader with the path to a .cseq file."""
@@ -72,21 +61,18 @@ class CSEQReader:
             metadata_bytes = self._file.read(index_offset - metadata_offset)
             self._metadata = json.loads(metadata_bytes.decode('utf-8'))
 
-    def get(self, sequence_id: str, validate_checksum: bool = True) -> str:
+    def get(self, sequence_id: str, start: int = None, end: int = None, validate_checksum: bool = False) -> str:
         """
-        Fetches a single sequence by its ID. This is the primary method.
+        Fetches a sequence or a subsequence by its ID.
 
         Args:
             sequence_id (str): The ID of the sequence to retrieve.
-            validate_checksum (bool): If True, verifies the data's integrity.
-                                      Set to False for maximum speed.
+            start (int, optional): The 0-based start coordinate for a subsequence.
+            end (int, optional): The 0-based end coordinate for a subsequence.
+            validate_checksum (bool): If True, verifies data integrity (only for full sequences).
 
         Returns:
-            The decoded DNA sequence string.
-            
-        Raises:
-            KeyError: If the sequence_id is not found in the file.
-            IOError: If the file is not open or data is corrupt.
+            The decoded DNA sequence or subsequence string.
         """
         if self._file is None:
             raise IOError("File is not open. Use 'with CSEQReader(...) as reader:'.")
@@ -96,16 +82,41 @@ class CSEQReader:
 
         offset, compressed_length, original_length = self._index[sequence_id]
         
-        # Jump directly to the sequence's data block
+        # --- Handle subsequence requests ---
+        if start is not None or end is not None:
+            # If getting a subsequence, checksum validation is skipped as we aren't reading the whole block.
+            s_start = start or 0
+            s_end = end or original_length
+            
+            if s_start < 0 or s_end > original_length or s_start >= s_end:
+                raise ValueError(f"Invalid slice coordinates for sequence of length {original_length}: start={s_start}, end={s_end}")
+
+            # Calculate which bytes we need to read. Each byte holds 2 bases.
+            byte_start = s_start // 2
+            byte_end = (s_end + 1) // 2
+            
+            self._file.seek(offset + byte_start)
+            encoded_slice = self._file.read(byte_end - byte_start)
+            
+            # Decode the slice we read
+            # The length we pass here might be larger than needed, but decode_sequence can handle it.
+            decoded_full_slice = decode_sequence(encoded_slice, len(encoded_slice) * 2)
+            
+            # Trim the decoded slice to the exact start and end requested
+            # This accounts for when the slice starts in the middle of a byte.
+            slice_internal_start = s_start % 2
+            slice_internal_end = slice_internal_start + (s_end - s_start)
+            
+            return decoded_full_slice[slice_internal_start:slice_internal_end]
+
+        # --- Handle full sequence requests ---
         self._file.seek(offset)
         
-        # The last 4 bytes are the checksum
         data_length = compressed_length - 4
-        
         encoded_data = self._file.read(data_length)
-        checksum_bytes = self._file.read(4)
         
         if validate_checksum:
+            checksum_bytes = self._file.read(4)
             expected_checksum, = struct.unpack('>I', checksum_bytes)
             if not verify_checksum(encoded_data, expected_checksum):
                 raise IOError(f"Data corruption detected for sequence '{sequence_id}'. Checksum mismatch.")
@@ -127,7 +138,7 @@ class CSEQReader:
         """
         if sequence_id not in self._index:
             raise KeyError(f"Sequence ID '{sequence_id}' not found in the file.")
-        return self._index[sequence_id][2] # The 3rd item is original_length
+        return self._index[sequence_id][2]
 
     def close(self):
         """Closes the file handle."""
@@ -135,7 +146,6 @@ class CSEQReader:
             self._file.close()
             self._file = None
 
-    # --- Pythonic "Magic Methods" for a better user experience ---
     def __enter__(self):
         """Called when entering a `with` block."""
         self.open()
@@ -156,4 +166,3 @@ class CSEQReader:
     def __contains__(self, key: str) -> bool:
         """Allows `'chrM' in reader` to check for a sequence's existence."""
         return key in self._index
-
