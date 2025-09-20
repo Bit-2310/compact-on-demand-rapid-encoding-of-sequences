@@ -6,7 +6,7 @@
 
 [![Project Status](https://img.shields.io/badge/status-in_development-orange?style=for-the-badge)](https://github.com/pranavaupparlapalli/CORE-seq)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](./LICENSE.md)
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen?style=for-the-badge&logo=pytest)](./tests)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-blueviolet?style=for-the-badge&logo=github)](https://github.com/pranavaupparlapalli/CORE-seq/issues)
 
@@ -15,6 +15,19 @@ Hi! I am Pranava Upparlapalli and this is my brain child at 1:00 AM. The reason 
 
 Of course, there are several, for example, the BAM format for alignments, CRAM for reference-based compression, UCSC's `.2bit` format and several others. But I wanted to work on this problem too, just because... why not? It's an interesting problem, at least in my mind.
 
+---
+
+## Current Status & Alpha Testing
+
+The core Python library for CORE-seq is now functional and tested! This includes the ability to write `.cseq` files, read them back with on-demand access, and load data in parallel for machine learning workflows.
+
+The project is now in an **alpha testing phase**. I would be very grateful for feedback from other developers who are interested in high-performance bioinformatics. You can install the library directly from this repository to try it out in your own projects.
+
+### Installation for Alpha Testing
+```bash
+# Make sure you have Python 3.11+ and pip installed
+pip install git+[https://github.com/Bit-2310/compact-on-demand-rapid-encoding-of-sequences.git](https://github.com/Bit-2310/compact-on-demand-rapid-encoding-of-sequences.git)
+```
 ---
 ## 📂 Directory Structure
 
@@ -75,13 +88,23 @@ Here are a few simple ways CORE-seq could help:
 
 This project is currently in the planning and early development stage. Here's the plan:
 
--   [x] Define the core concept and file specification.
--   [x] Initial Skeleton
--   [x] Develop the core Python library for encoding/decoding sequences.
--   [ ] **Coming Next:** Build the tool for converting FASTA files to `.cseq`.
--   [ ] Implement the high-performance ML data loader.
--   [ ] Package the project for release on PyPI.
--   [ ] Write comprehensive documentation and tutorials.
+- [x] Define the core concept and file specification.
+
+- [x] Implement lossless 4-bit encoding/decoding (_codec).
+
+- [x] Build the file writer for .cseq creation (writer).
+
+- [x] Build the file reader with on-demand access (reader).
+
+- [x] Implement the high-performance, parallel ML data loader (loader).
+
+- [x] Verify core functionality with an end-to-end test suite.
+
+- [ ] *Coming Next:* Benchmark performance against FASTA, .2bit, and fasta.gz.
+
+- [ ] Develop a user-friendly Command-Line Interface (CLI).
+
+- [ ] Package the project for a stable release on PyPI.
 
 ---
 
