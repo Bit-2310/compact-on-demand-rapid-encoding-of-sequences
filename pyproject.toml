@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
     "numpy",
     "tqdm",
+    "numba",
 ]
 
 [project.optional-dependencies]
