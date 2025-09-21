@@ -11,12 +11,12 @@ build-backend = "setuptools.build_meta"
 name = "core-seq"
 version = "0.1.0"
 authors = [
-  { name="Pranava Upparlapalli", email="author@example.com" },
+  { name="Pranava Upparlapalli", email="pxu.bioinfo@gmail.com" },
 ]
 description = "A high-performance binary format for biological sequences, designed to accelerate modern bioinformatics and machine learning."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { file="LICENSE" }
+license = { file="LICENSE.md" }
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -25,16 +25,19 @@ classifiers = [
 # These are the libraries your project needs to RUN.
 dependencies = [
     "numpy",
-    "tqdm", # Added tqdm here as it's used by the writer
+    "tqdm",
 ]
 
 [project.optional-dependencies]
 # These are libraries needed only for DEVELOPMENT and TESTING.
 dev = [
     "pytest",
+    "pyfaidx",
+    "zstandard",
 ]
 
 [tool.setuptools]
 # This is the most CRITICAL part for solving your import error.
 # This line tells setuptools: "My package's source code lives inside the 'src' directory."
 package-dir = {"" = "src"}
+
